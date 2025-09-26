@@ -816,7 +816,7 @@ export class TokenConverter {
     }
 
     if (filter === FilterType.IS || filter === FilterType.HAS) {
-      return this.checkInvalidTextValue(value as TextFilter['value']);
+      return null;
     }
 
     if ([FilterType.TEXT_IN, FilterType.NUMERIC_IN].includes(filter)) {
@@ -836,7 +836,21 @@ export class TokenConverter {
   checkInvalidTextFilter = (key: TextFilter['key'], value: TextFilter['value']) => {
     // Explicit tag keys will always be treated as text filters
     if (key.type === Token.KEY_EXPLICIT_TAG) {
-      return this.checkInvalidTextValue(value);
+      if (this.config.disallowWildcard && value.value.includes('*')) {
+        return {
+          type: InvalidReason.WILDCARD_NOT_ALLOWED,
+          reason: this.config.invalidMessages[InvalidReason.WILDCARD_NOT_ALLOWED],
+        };
+      }
+
+      if (!value.quoted && /(^|[^\\])"/.test(value.value)) {
+        return {
+          type: InvalidReason.MUST_BE_QUOTED,
+          reason: this.config.invalidMessages[InvalidReason.MUST_BE_QUOTED],
+        };
+      }
+
+      return null;
     }
 
     const keyName = getKeyName(key);
@@ -894,12 +908,30 @@ export class TokenConverter {
       };
     }
 
-    return this.checkInvalidTextValue(value);
+    if (this.config.disallowWildcard && value.value.includes('*')) {
+      return {
+        type: InvalidReason.WILDCARD_NOT_ALLOWED,
+        reason: this.config.invalidMessages[InvalidReason.WILDCARD_NOT_ALLOWED],
+      };
+    }
+
+    if (!value.quoted && /(^|[^\\])"/.test(value.value)) {
+      return {
+        type: InvalidReason.MUST_BE_QUOTED,
+        reason: this.config.invalidMessages[InvalidReason.MUST_BE_QUOTED],
+      };
+    }
+
+    if (!value.quoted && value.value === '') {
+      return {
+        type: InvalidReason.FILTER_MUST_HAVE_VALUE,
+        reason: this.config.invalidMessages[InvalidReason.FILTER_MUST_HAVE_VALUE],
+      };
+    }
+
+    return null;
   };
 
-  /**
-   * Validates the value of a text filter
-   */
   checkInvalidTextValue = (value: TextFilter['value']) => {
     if (this.config.disallowWildcard && value.value.includes('*')) {
       return {
