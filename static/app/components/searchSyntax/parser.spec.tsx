@@ -342,6 +342,24 @@ describe('searchSyntax/parser', function () {
       ]);
     });
 
+    it('handles queries with missing tags', () => {
+      const result = parseSearch('tags[foo]:', {
+        flattenParenGroups: false,
+      });
+      if (result === null) {
+        throw new Error('Parsed result as null');
+      }
+      expect(result).toEqual([
+        expect.objectContaining({type: Token.SPACES}),
+        expect.objectContaining({
+          type: Token.FILTER,
+          filter: 'text',
+          value: expect.objectContaining({value: ''}),
+        }),
+        expect.objectContaining({type: Token.SPACES}),
+      ]);
+    });
+
     it('tokenizes empty matched parens and flattenParenGroups=false', () => {
       const result = parseSearch('()', {
         flattenParenGroups: false,
